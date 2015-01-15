@@ -5,56 +5,57 @@
 #include <unistd.h>
 
 extern char **getline(void);
-int match(char **args, int i);
-static char* path = "/bin/";
 char *concat(char* a, char* b);
 char *which(char* cmd);
 
 int main(void) {
 	int i;
 	char *cmd;
-	char **args;
-	char **argptr;
+	char** args, argptr;
 	pid_t pid;
+
 	while(1) {
 		printf("waiting to get a line\n");
 		args = getline();
-		printf("Argument %d: %s\n", i, args[i]);
-		printf("###GOT: %s###\n", which(args[0])); /*just for testing */
 		pid = fork();
 		if(pid==0){
-			printf("child born. ARG 0 IS: %s\n",args[0]);
-			cmd = concat(path, args[0]);
+			printf("------CHILD------\n");
+			printf("ARG 0 is: %s\n",args[0]);
+			cmd = which(args[0]);
+			printf("command is: %s\n",cmd);
 			argptr = args + 1;
-			printf("argptr is %s\n", argptr[0]);
+			printf("argptr is: %s\n", argptr[0]);
 			execl(cmd, cmd, argptr[0], NULL);
+			printf("------BROKEN------\n");
 		}
 		else{
 			wait(&pid);
-			printf("child died\n");
+			printf("------PARENT------\n");
+			printf("child died :)\n");
 		}
 	}
 }
 
-char *concat(char* a, char* b){
+/*concatinates a string, because C is that dumb*/
+char* concat(char* a, char* b){
 	char *c = (char *) malloc(1 + strlen(a)+ strlen(b));
     strcpy(c, a);
     strcat(c, b);
     return c;
 }
 
-char *which(char* cmd){
-	/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c */
-	/* http://www.tldp.org/LDP/lpg/node11.html */
+
+/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c */
+/* http://www.tldp.org/LDP/lpg/node11.html */
+char* which(char* cmd){
 	int fd[2];
-	int nbytes;
+	int nbytes, i;
 	pid_t childpid;
 	char readbuffer[80];
-	int i;
+	char *c;
 	for(i = 0; i<80; i++){
-		readbuffer[i] = '\0';
+		readbuffer[i] = '\0';  /*because C is stupid*/
 	}
-
 	pipe(fd);
 	if((childpid = fork()) == -1){
 		perror("fork");
@@ -68,9 +69,12 @@ char *which(char* cmd){
 	}else{
 		close(fd[1]); /* close pipe write */
 		nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
-        printf("\nReceived string: %s\n", readbuffer);
+        /*printf("\nReceived string: %s\n", readbuffer);*/
+        wait(&childpid);
 	}
-	return readbuffer;
+	c = strrchr(readbuffer, '\n'); /*strip \n which is added*/
+	if (c != NULL) *(c) = '\0';
+	return concat("",readbuffer);
 }
 
 /*
