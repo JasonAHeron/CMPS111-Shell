@@ -11,24 +11,25 @@ char *concat(char* a, char* b);
 
 int main(void) {
 	int i;
-	char *bob;
+	char *cmd;
 	char **args;
+	char **argptr;
 	pid_t pid;
 	while(1) {
 		printf("waiting to get a line\n");
 		args = getline();
-		for(i = 0; args[i] != NULL; i++) {
-			printf("Argument %d: %s\n", i, args[i]);
-			pid = fork();
-			if(pid==0){
-				printf("child born\n");
-				bob = concat(path, args[i]);
-				execl(bob, bob, NULL);
-			}
-			else{
-				wait(&pid);
-				printf("child died\n");
-			}
+		printf("Argument %d: %s\n", i, args[i]);
+		pid = fork();
+		if(pid==0){
+			printf("child born. ARG 0 IS: %s\n",args[0]);
+			cmd = concat(path, args[0]);
+			argptr = args + 1;
+			printf("argptr is %s\n", argptr[0]);
+			execl(cmd, cmd, argptr[0], NULL);
+		}
+		else{
+			wait(&pid);
+			printf("child died\n");
 		}
 	}
 }
