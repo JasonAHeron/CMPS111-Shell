@@ -6,6 +6,8 @@
 
 extern char **getline(void);
 int match(char **args, int i);
+static char* path = "/bin/";
+char *concat(char* a, char* b);
 
 int main(void) {
 	int i;
@@ -15,11 +17,18 @@ int main(void) {
 		args = getline();
 		for(i = 0; args[i] != NULL; i++) {
 			printf("Argument %d: %s\n", i, args[i]);
-			i = match(args, i);
+			char *string = concat(path, args[i]);
+			execl(string, string, NULL);
 		}
 	}
 }
 
+char *concat(char* a, char* b){
+	char *c = (char *) malloc(1 + strlen(a)+ strlen(b));
+    strcpy(c, a);
+    strcat(c, b);
+    return c;
+}
 
 int match(char **args, int i) {
 	char *current = args[i];
