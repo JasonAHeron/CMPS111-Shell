@@ -6,15 +6,6 @@
 int _numargs = 10;
 char *_args[10];
 int _argcount = 0;
-
-/*
-char *strdup (const char *s) {
-    char *d = malloc (strlen (s) + 1);   
-    if (d != NULL) strcpy (d,s);         
-    return d;                            
-}
-*/
-
 %}
 
 WORD [a-zA-Z0-9\/\.-]+
@@ -35,4 +26,7 @@ _args[0] = NULL;
 [ \t]+
 .
 %%
-char **getline(void) { return (char **)yylex(); }
+char **getline(void) {
+_argcount = 0;
+_args[0] = NULL;
+return (char **)yylex(); }

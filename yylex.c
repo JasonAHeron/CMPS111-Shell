@@ -373,16 +373,7 @@ char *yytext;
 int _numargs = 10;
 char *_args[10];
 int _argcount = 0;
-
-/*
-char *strdup (const char *s) {
-    char *d = malloc (strlen (s) + 1);   
-    if (d != NULL) strcpy (d,s);         
-    return d;                            
-}
-*/
-
-#line 386 "yylex.c"
+#line 377 "yylex.c"
 
 /* Macros after this point can all be overridden by user definitions in
  * section 1.
@@ -533,9 +524,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
 
-#line 26 "scanner.l"
+#line 17 "scanner.l"
 
-#line 539 "yylex.c"
+#line 530 "yylex.c"
 
 	if ( yy_init )
 		{
@@ -620,7 +611,7 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 27 "scanner.l"
+#line 18 "scanner.l"
 {
 	if(_argcount < _numargs-1) {
 		_args[_argcount++] = (char *)strdup(yytext);
@@ -630,25 +621,25 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 34 "scanner.l"
+#line 25 "scanner.l"
 {return (int)_args;}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 35 "scanner.l"
+#line 26 "scanner.l"
 
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 36 "scanner.l"
+#line 27 "scanner.l"
 
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 37 "scanner.l"
+#line 28 "scanner.l"
 ECHO;
 	YY_BREAK
-#line 652 "yylex.c"
+#line 643 "yylex.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1534,6 +1525,9 @@ int main()
 	return 0;
 	}
 #endif
-#line 37 "scanner.l"
+#line 28 "scanner.l"
 
-char **getline(void) { return (char **)yylex(); }
+char **getline(void) {
+_argcount = 0;
+_args[0] = NULL;
+return (char **)yylex(); }
