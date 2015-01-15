@@ -50,6 +50,10 @@ char *which(char* cmd){
 	int nbytes;
 	pid_t childpid;
 	char readbuffer[80];
+	int i;
+	for(i = 0; i<80; i++){
+		readbuffer[i] = '\0';
+	}
 
 	pipe(fd);
 	if((childpid = fork()) == -1){
