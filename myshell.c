@@ -8,6 +8,7 @@ extern char **getline(void);
 int match(char **args, int i);
 static char* path = "/bin/";
 char *concat(char* a, char* b);
+char *which(char* cmd);
 
 int main(void) {
 	int i;
@@ -19,6 +20,7 @@ int main(void) {
 		printf("waiting to get a line\n");
 		args = getline();
 		printf("Argument %d: %s\n", i, args[i]);
+		printf("###GOT: %s###\n", which(args[0])); /*just for testing */
 		pid = fork();
 		if(pid==0){
 			printf("child born. ARG 0 IS: %s\n",args[0]);
@@ -41,28 +43,41 @@ char *concat(char* a, char* b){
     return c;
 }
 
-int match(char **args, int i) {
-	char *current = args[i];
-	printf("in match\n");
-	if(!strcmp(current,"exit")){
-		printf("found match against exit\n");
-		exit(0);
+char *which(char* cmd){
+	/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c */
+	/* http://www.tldp.org/LDP/lpg/node11.html */
+	int fd[2];
+	int nbytes;
+	pid_t childpid;
+	char readbuffer[80];
+
+	pipe(fd);
+	if((childpid = fork()) == -1){
+		perror("fork");
+        exit(1);
+    }
+	if(childpid == 0){
+		close(fd[0]); /* close pipe read */
+		close(1); /* close std_out */
+		dup2(fd[1], 1); /*std_out -> pipe write */
+        execl("/usr/bin/which", "/usr/bin/which", cmd ,NULL);
+	}else{
+		close(fd[1]); /* close pipe write */
+		nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
+        printf("\nReceived string: %s\n", readbuffer);
 	}
-	else {
-	pid_t pid = fork();
-	if(pid==0){
-		printf("running: %s\n",current);
-		/*
-		char str[100];
-		str = strcat(str, "/bin/");
-		str = strcat(str, current);
-		*/
-		execlp(current, current, args);
-	}
-	else{
-		waitpid(pid,0,0);
-		printf("DONE WAITING, READY TO GO!\n");
-	}
-	return i;
-	}
+	return readbuffer;
 }
+
+/*
+void redirect_output(char* location){
+	 https://www.cs.rutgers.edu/~pxk/416/notes/c-tutorials/dup2.html 
+	int newfd;
+	if ((newfd = open(location, O_CREAT|O_TRUNC|O_WRONLY, 0644)) < 0) {
+		perror(location);	
+		exit(1);
+	}
+
+} */
+
+
