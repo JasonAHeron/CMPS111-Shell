@@ -11,11 +11,11 @@ char *which(char* cmd);
 int main(void) {
 	int i;
 	char *cmd;
-	char** args, argptr;
+	char** args;
 	pid_t pid;
 
 	while(1) {
-		printf("waiting to get a line!!!!\n");
+		printf("waiting to get a line\n");
 		args = getline();
 		pid = fork();
 		if(pid==0){
@@ -24,7 +24,6 @@ int main(void) {
 			printf("ARG 0 is: %s\n",args[0]);
 			cmd = which(args[0]);
 			printf("command is: %s\n",cmd);
-			/*argptr = args + 1;*/
 			printf("argptr is: %s\n", args[1]);
 			execl(cmd, cmd, args[1], NULL);
 			printf("------BROKEN------\n");
@@ -32,11 +31,12 @@ int main(void) {
 			wait(&pid);
 			printf("------PARENT------\n");
 			printf("child died :)\n");
+			/* I want to free from the malloc but how? free(cmd);*/
 		}
 	}
 }
 
-/*concatinates a string, because C is that dumb*/
+/*concatinates a string*/
 char* concat(char* a, char* b){
 	char *c = (char *) malloc(1 + strlen(a)+ strlen(b));
     strcpy(c, a);
@@ -45,34 +45,41 @@ char* concat(char* a, char* b){
 }
 
 
-/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c */
-/* http://www.tldp.org/LDP/lpg/node11.html */
+/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c 
+   http://www.tldp.org/LDP/lpg/node11.html 
+   http://stackoverflow.com/questions/4812891/fork-and-pipes-in-c */
 char* which(char* cmd){
 	int fd[2];
 	int nbytes, i, ln;
 	pid_t childpid;
-	char readbuffer[80];
+	char readbuffer[80]; /*why do we have a limit of 80? can we redesign to prevent it from overflowing?*/
 	char *c;
 	for(i = 0; i<80; i++){
-		readbuffer[i] = '\0';  /*because C is stupid*/
+		readbuffer[i] = '\0'; 
 	}
 	pipe(fd);
-	if((childpid = fork()) == -1){
+	childpid = fork();
+	if(childpid == -1){
 		perror("fork");
         exit(1);
     }
+    /*Whatever is written to fd[1] will be read from fd[0].*/
 	if(childpid == 0){
 		printf("Brit Debug. 1 \n");
-		close(fd[0]); /* close pipe read */
-		close(1); /* close std_out */
-		dup2(fd[1], 1); /*std_out -> pipe write */
-        execl("/usr/bin/which", "/usr/bin/which", cmd ,NULL);
+		close(fd[0]); /* close pipe read, we are not using it */
+		close(1); /* close std_out so we can dup it */
+		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
+        execl("/usr/bin/which", "/usr/bin/which", cmd ,NULL); /* now the output is in our pipe*/
 	}else{
 		printf("Brit Debug. 2 \n");
-		close(fd[1]); /* close pipe write */
-		nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
-        /*printf("\nReceived string: %s\n", readbuffer);*/
+		close(fd[1]); /* close pipe write, we are not using it */
         wait(&childpid);
+        /*QUESTION!!: Why did we have the nbytes line above wait? shouldn't we 
+        wait for the child process to die before reading from fd[0]?
+        I want to make sure I am not breaking something by doing this
+        line swap.*/
+        /* put the contents of fd[0] into readbuffer*/
+		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
 	}
 	/* c = strrchr(readbuffer, '\n'); strip \n which is added*/
 	ln = strlen(readbuffer) - 1; /*strip \n which is added*/
