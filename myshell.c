@@ -19,7 +19,7 @@ int main(void) {
 		args = getline();
 		pid = fork();
 		if(pid==0){
-			/*if (args[0]=='\0') continue;*/
+			if (args[0]=='\0') continue;
 			printf("------CHILD------\n");
 			printf("ARG 0 is: %s\n",args[0]);
 			cmd = which(args[0]);
@@ -81,14 +81,13 @@ char* which(char* cmd){
         /* put the contents of fd[0] into readbuffer*/
 		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
 	}
-	/* c = strrchr(readbuffer, '\n'); strip \n which is added*/
-	ln = strlen(readbuffer) - 1; /*strip \n which is added*/
-    if (readbuffer[ln] == '\n') {
-       readbuffer[ln] = '\0';
-    }
 
-	if (c != NULL) *(c) = '\0';
-	return concat("",readbuffer);
+    c = strrchr(readbuffer, '\n'); /* strip \n which is added*/
+	if (c != NULL){
+       *(c) = '\0'; 
+	} 
+
+	return concat("",readbuffer); 
 }
 
 /*
