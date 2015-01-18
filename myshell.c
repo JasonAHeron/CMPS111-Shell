@@ -15,20 +15,20 @@ int main(void) {
 	pid_t pid;
 
 	while(1) {
-		printf("waiting to get a line\n");
+		printf("waiting to get a line!!!!\n");
 		args = getline();
 		pid = fork();
 		if(pid==0){
+			/*if (args[0]=='\0') continue;*/
 			printf("------CHILD------\n");
 			printf("ARG 0 is: %s\n",args[0]);
 			cmd = which(args[0]);
 			printf("command is: %s\n",cmd);
-			argptr = args + 1;
-			printf("argptr is: %s\n", argptr[0]);
-			execl(cmd, cmd, argptr[0], NULL);
+			/*argptr = args + 1;*/
+			printf("argptr is: %s\n", args[1]);
+			execl(cmd, cmd, args[1], NULL);
 			printf("------BROKEN------\n");
-		}
-		else{
+		}else{
 			wait(&pid);
 			printf("------PARENT------\n");
 			printf("child died :)\n");
@@ -49,7 +49,7 @@ char* concat(char* a, char* b){
 /* http://www.tldp.org/LDP/lpg/node11.html */
 char* which(char* cmd){
 	int fd[2];
-	int nbytes, i;
+	int nbytes, i, ln;
 	pid_t childpid;
 	char readbuffer[80];
 	char *c;
@@ -62,17 +62,24 @@ char* which(char* cmd){
         exit(1);
     }
 	if(childpid == 0){
+		printf("Brit Debug. 1 \n");
 		close(fd[0]); /* close pipe read */
 		close(1); /* close std_out */
 		dup2(fd[1], 1); /*std_out -> pipe write */
         execl("/usr/bin/which", "/usr/bin/which", cmd ,NULL);
 	}else{
+		printf("Brit Debug. 2 \n");
 		close(fd[1]); /* close pipe write */
 		nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
         /*printf("\nReceived string: %s\n", readbuffer);*/
         wait(&childpid);
 	}
-	c = strrchr(readbuffer, '\n'); /*strip \n which is added*/
+	/* c = strrchr(readbuffer, '\n'); strip \n which is added*/
+	ln = strlen(readbuffer) - 1; /*strip \n which is added*/
+    if (readbuffer[ln] == '\n') {
+       readbuffer[ln] = '\0';
+    }
+
 	if (c != NULL) *(c) = '\0';
 	return concat("",readbuffer);
 }
