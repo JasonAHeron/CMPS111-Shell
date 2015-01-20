@@ -14,6 +14,7 @@ int main(void) {
 	while(1) {
 		printf("SEXY_SHELL#");
 		args = getline();
+		if (args[0]=='\0') continue; 
 		parseargs(args);
 	}
 }
@@ -22,8 +23,6 @@ void parseargs(char** args){
 	char *cmd;
 	pid_t pid;
 	pid = fork();
-     
-
      /*special case for 1st LHS argument, from then on always only exec RHS*/
     /*itor through the array of arguments until we find a special character
       check to see if we have found a special character already
@@ -37,44 +36,29 @@ void parseargs(char** args){
       red_in: result = f_red_in(LHS,RHS)
       red_out: result = f_red_out(LHS,RHS)*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 	if(pid==0){
-			if (args[0]=='\0') continue;
 			printf("------CHILD------\n");
 			printf("ARG 0 is: %s\n",args[0]);
 			cmd = which(args[0]);
 			printf("command is: %s\n",cmd);
-			++args;
 			execv(cmd, args);
 			printf("------BROKEN------\n");
-		}else{
+	}else{
 			wait(&pid);
 			printf("------PARENT------\n");
 			printf("child died :)\n");
 			/* I want to free from the malloc but how? free(cmd);*/
-		}
+	}
 }
 
-
+/*
 char* f_pipe(char* result, char** RHS){
 	char* cmd;
 	cmd = which(RHS[0]);
 	++RHS;
 	full_args = concat(RHS, result);
 	execv(cmd, full_args);
-}
+}*/
 
 /*concatinates a string*/
 char* concat(char* a, char* b){
@@ -83,7 +67,7 @@ char* concat(char* a, char* b){
     strcat(c, b);
     return c;
 }
-
+/*
 char** concat(char** a, char* b){
 	int len;
 	len = array_length(a);
@@ -96,7 +80,7 @@ char** concat(char** a, char* b){
 	newargs[len] = b;
 	newargs[len+1] = '\0';
 	return newargs;
-}
+}*/
 
 int array_length(char** array){
 	int count = 0; 
