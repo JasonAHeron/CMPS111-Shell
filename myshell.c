@@ -15,7 +15,7 @@ int main(void) {
 	pid_t pid;
 
 	while(1) {
-		printf("waiting to get a line\n");
+		printf("SEXY_SHELL#");
 		args = getline();
 		pid = fork();
 		if(pid==0){
