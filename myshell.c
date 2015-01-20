@@ -73,10 +73,6 @@ char* which(char* cmd){
 	}else{
 		close(fd[1]); /* close pipe write, we are not using it */
         wait(&childpid);
-        /*QUESTION!!: Why did we have the nbytes line above wait? shouldn't we 
-        wait for the child process to die before reading from fd[0]?
-        I want to make sure I am not breaking something by doing this
-        line swap.*/
         /* put the contents of fd[0] into readbuffer*/
         printf("Size of buffer is %d\n",sizeof(readbuffer));
 		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
@@ -98,5 +94,42 @@ void redirect_output(char* location){
 	}
 
 } */
+
+/*
+
+ls *.c | cat > recordings
+<command> <args>
+<ls> <-a -l *.c | cat > recordings>
+
+old = ls -a -l *.c
+gather all of this together 
+
+bool pipe
+bool redirect
+
+pipe = true
+
+new = cat
+
+pipe == true
+:: pipe old into new
+to get a new old
+set pipe = false
+redirect = true
+
+
+
+
+
+
+
+*/
+
+
+
+
+
+
+
 
 
