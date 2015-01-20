@@ -24,8 +24,8 @@ int main(void) {
 			printf("ARG 0 is: %s\n",args[0]);
 			cmd = which(args[0]);
 			printf("command is: %s\n",cmd);
-			printf("argptr is: %s\n", args[1]);
-			execl(cmd, cmd, args[1], NULL);
+			++args;
+			execv(cmd, args);
 			printf("------BROKEN------\n");
 		}else{
 			wait(&pid);
@@ -54,6 +54,7 @@ char* which(char* cmd){
 	pid_t childpid;
 	char readbuffer[80]; /*why do we have a limit of 80? can we redesign to prevent it from overflowing?*/
 	char *c;
+	/*http://stackoverflow.com/questions/22852514/c-string-null-terminator-in-oversized-buffer*/
 	for(i = 0; i<80; i++){
 		readbuffer[i] = '\0'; 
 	}
@@ -65,13 +66,11 @@ char* which(char* cmd){
     }
     /*Whatever is written to fd[1] will be read from fd[0].*/
 	if(childpid == 0){
-		printf("Brit Debug. 1 \n");
 		close(fd[0]); /* close pipe read, we are not using it */
 		close(1); /* close std_out so we can dup it */
 		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
         execl("/usr/bin/which", "/usr/bin/which", cmd ,NULL); /* now the output is in our pipe*/
 	}else{
-		printf("Brit Debug. 2 \n");
 		close(fd[1]); /* close pipe write, we are not using it */
         wait(&childpid);
         /*QUESTION!!: Why did we have the nbytes line above wait? shouldn't we 
@@ -79,14 +78,13 @@ char* which(char* cmd){
         I want to make sure I am not breaking something by doing this
         line swap.*/
         /* put the contents of fd[0] into readbuffer*/
+        printf("Size of buffer is %d\n",sizeof(readbuffer));
 		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
 	}
-
     c = strrchr(readbuffer, '\n'); /* strip \n which is added*/
 	if (c != NULL){
        *(c) = '\0'; 
 	} 
-
 	return concat("",readbuffer); 
 }
 
