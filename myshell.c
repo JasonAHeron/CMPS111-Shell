@@ -9,9 +9,10 @@ char *concat(char* a, char* b);
 char *which(char* cmd);
 int array_length(char** array);
 void shell_pipe(char** LHS, char** RHS);
+void shell_pipe2(char** command, int save[]);
 void redirect_output(char** LHS, char* filename);
 void print_array(char ** array, char* caller);
-void standard_exec(char** command);
+void standard_exec(char** command, int save[], int original[]);
 int get_cmd_end(char** RHS_start);
 void parseargs(char** args);
 
@@ -20,8 +21,8 @@ int main(void) {
 	while(1) {
 		printf("SEXY_SHELL# ");
 		args = getline();
-		printf("args is: %s\n\n", *args);
-		if (*args[0]=='\0'){
+		/*printf("args is: %s\n\n", *args);*/
+		if (args[0]=='\0'){
 			continue;
 		} 
 		parseargs(args);
@@ -36,16 +37,75 @@ void parseargs(char** args){
 	int i;
 	int start;
 	int end;
+	int save[2];
+	int original[2];
+	FILE* stream;
+	int c;
 	start = 0;
 	i = 0;
 	/*execute the first argument*/
     end = get_cmd_end(args);
     char_save = args[end];
+    printf("end  here is: %d\n",end);
     args[end] = '\0';
-    standard_exec(args);
+    standard_exec(args, save, original);
     args[end] = char_save;
     i = end;
+    if(char_save == '\0'){
 
+       stream = fdopen (save[0], "r");
+       while ((c = fgetc (stream)) != EOF)
+          putchar (c);
+       dup2(original[0], 0);
+	   dup2(original[1], 1);
+	   close(stream);
+    }
+    /*now stdout of this arg is saved into fd[1]*/
+/*
+bugs:
+ls | cat | ls
+*/
+    while(args[i] != NULL){
+		switch(*args[i]){
+			case '|': 
+               /*execute start to the pipe. save it into stdout of w/e.*/
+               end = get_cmd_end(args+i+1);
+               printf("end is: %d\n",end);
+               char_save = args[end];
+               args[end] = '\0';
+               printf("args == %s\n",*(args+i+1));
+               /*shell_pipe2(args+i+1, save);*/
+               args[end] = char_save;
+               i = end;
+			break;
+			case '>':
+			   /*args[i] = '\0';
+			   LHS = args;
+			   filename = args[i+1];
+			   redirect_output(LHS,filename);*/
+			break;
+			case '<':
+			break;
+			default: ++i;
+			   /*standard exec*/
+			break;
+		}
+		++i;
+	}
+	stream = fdopen (save[0], "r");
+    while ((c = fgetc (stream)) != EOF) {
+    	printf("___ val is %d of ",c);
+    	if(c == '\0'){
+    		printf("NULL FOUND\n");
+    	}
+        putchar (c);
+    }
+    printf("The end\n");
+
+	dup2(original[0], 0);
+	dup2(original[1], 1);
+
+    
     /*
     	while(args[i] != NULL){
 		switch(*args[i]){
@@ -82,28 +142,64 @@ void parseargs(char** args){
 
 int get_cmd_end(char** cmd_start){
    int index;
+   char* word;
    index = 0;
    while(cmd_start[index]!=NULL && *cmd_start[index]!='|' && *cmd_start[index]!='<' && *cmd_start[index]!='>' ){
+   	/*printf("examining: %s",cmd_start[index]);*/
       ++index;
    }
    return index;
 }
 
-void standard_exec(char** command){
+void standard_exec(char** command, int save[], int original[]){
 	if(command[0] != '\0'){ /* I can't return if null for some reason*/
 		pid_t pid;
 		char* cmd;
+		FILE* stream;
+		int c;
 		cmd = which(command[0]);
-		printf("Command is: %s\n",command[0]);
+		pipe(save);
 		pid = fork();
 		if(pid == 0){
-			execv(cmd, command);
+			close(save[0]); /* close pipe read, we are not using it */
+			original[1] = dup(1);
+			close(1); /* close std_out so we can dup it */
+	        dup2(save[1], 1); /*std_out (the output of which) -> pipe write */
+			execv(cmd, command); /*This is the difference*/
 		}else{
+			close(save[1]); /* close pipe write, we are not using it */
+			original[0] = dup(0);
+		    dup2(save[0], 0);
 			wait(&pid);
 		}
     }
 }
 
+
+/*printf("cmd is: %s\n",cmd);
+printf("stdin is: %s\n",stdin);*/
+void shell_pipe2(char** command, int save[]){
+	char* cmd;
+	pid_t pid;
+	FILE* stream;
+	int c;
+	cmd = which(command[0]);
+	pid = fork();
+	if(pid == 0){
+   	/*READ FROM PIPE!!*/
+        stream = fdopen (save[0], "r");
+        close(save[0]);
+        close(1);
+        dup2(save[1],1);
+        /*I want to put the new output into stdout*/
+        /*    while ((c = fgetc (stream)) != EOF)
+               putchar (c);*/
+        execv(cmd, stream);
+	}else{
+		wait(&pid);
+		close(stream);
+	}
+}
 
 /*
 Given a result and a command, where the result is additional arguments for the command,
@@ -127,7 +223,6 @@ void redirect_output(char** LHS, char* filename){
 		fclose(fp);
 	}
 }
-
 
 void shell_pipe(char** LHS, char** RHS){
 	char* cmd;
@@ -156,7 +251,7 @@ void shell_pipe(char** LHS, char** RHS){
 		wait(&pid);
 		pid = fork();
 		if(pid == 0){
-   		/*READ FROM PIPE!!*/
+   		    /*READ FROM PIPE!!*/
 			execv(cmd2, stdin);
 		}else{
 			wait(&pid);
