@@ -46,7 +46,7 @@ void parseargs(char** args){
 	/*execute the first argument*/
     end = get_cmd_end(args);
     char_save = args[end];
-    /*printf("end  here is: %d\n",end);*/
+    printf("end  here is: %d\n",end);
     args[end] = '\0';
     standard_exec(args, save, original);
     args[end] = char_save;
@@ -66,20 +66,20 @@ void parseargs(char** args){
 /*
 bugs:
 ls | cat | ls
+ls | cat | wc
 */
     while(args[i] != NULL){
 		switch(*args[i]){
 			case '|': 
                /*execute start to the pipe. save it into stdout of w/e.*/
-               end = get_cmd_end(args+i+1);
-               /*printf("end is: %d\n",end);*/
+               end = get_cmd_end(args+i+1) + i+1;
+               printf("end is: %d\n",end);
                char_save = args[end];
                args[end] = '\0';
                /*printf("args == %s\n",*(args+i+1));*/
                shell_pipe2(args+i+1, save);
-               
                args[end] = char_save;
-               i += end;
+               i = end;
 			break;
 			case '>':
 			   /*args[i] = '\0';
@@ -89,11 +89,10 @@ ls | cat | ls
 			break;
 			case '<':
 			break;
-			default: ++i;
+			default: 
 			   /*standard exec*/
 			break;
 		}
-		++i;
 	}
 	printf("Printing final output: \n");
 	dup2(original[0], 0);
@@ -171,6 +170,7 @@ void standard_exec(char** command, int save[], int original[]){
 		}else{
 			close(save[1]); /* close pipe write, we are not using it */
 			original[0] = dup(0);
+			close(0);
 		    dup2(save[0], 0);
 			wait(&pid);
 		}
@@ -195,12 +195,15 @@ void shell_pipe2(char** command, int save[]){
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
+        printf("processing cmd %s:\n",cmd);
         /*I want to put the new output into stdout*/
-        /*    while ((c = fgetc (stream)) != EOF)
+            /*while ((c = fgetc (stream)) != EOF)
                putchar (c);*/
         execv(cmd, stream);
 	}else{
 		close(fd[1]);
+		close(0);
+		dup2(fd[0],0);
 		wait(&pid);
 		save[0] = fd[0];
 		save[1] = fd[1];
