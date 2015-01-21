@@ -9,8 +9,11 @@ char *concat(char* a, char* b);
 char *which(char* cmd);
 int array_length(char** array);
 void shell_pipe(char** LHS, char** RHS);
-void rediect_output(char** LHS, char* filename);
+void redirect_output(char** LHS, char* filename);
 void print_array(char ** array, char* caller);
+void standard_exec(char** command);
+int get_cmd_end(char** RHS_start);
+void parseargs(char** args);
 
 int main(void) {
 	char** args;
@@ -29,44 +32,85 @@ void parseargs(char** args){
 	char** LHS; 
 	char** RHS;
 	char* filename;
+	char* char_save;
 	int i;
+	int start;
+	int end;
+	start = 0;
 	i = 0;
-	print_array(args, "parsing");
-	while(args[i] != NULL){
+	/*execute the first argument*/
+    end = get_cmd_end(args);
+    char_save = args[end];
+    args[end] = '\0';
+    standard_exec(args);
+    args[end] = char_save;
+    i = end;
+
+    /*
+    	while(args[i] != NULL){
 		switch(*args[i]){
 			case '|':
-			printf("FOUND PIPE!!! \n");
-			args[i] = '\0';
-			LHS = args;
-			RHS = args+(i+1);
-			shell_pipe(LHS,RHS);
-			/* I want to free from the malloc but how? free(cmd);*/
+               /*execute start to the pipe. save it into stdout of w/e.
+			   args[i] = '\0';
+               
+			   LHS = args;
+			   get_cmd_end(args+(i+1));
+			   shell_pipe(LHS,RHS);
 			break;
 			case '>':
-			printf("FOUND redirect out!!! \n");
-			args[i] = '\0';
-			LHS = args;
-			filename = args[i+1];
-			rediect_output(LHS,filename);
+			   args[i] = '\0';
+			   LHS = args;
+			   filename = args[i+1];
+			   redirect_output(LHS,filename);
 			break;
 			case '<':
-			printf("FOUND redirect in !! \n");
 			break;
 			default:
-			/*standard exec*/
+			   /*standard exec
 			break;
 
 		}
 		++i;
 	}
+
+    */
+
+
+	/*LHS = args+start;
+	standard_exec(LHS);*/
 }
+
+int get_cmd_end(char** cmd_start){
+   int index;
+   index = 0;
+   while(cmd_start[index]!=NULL && *cmd_start[index]!='|' && *cmd_start[index]!='<' && *cmd_start[index]!='>' ){
+      ++index;
+   }
+   return index;
+}
+
+void standard_exec(char** command){
+	if(command[0] != '\0'){ /* I can't return if null for some reason*/
+		pid_t pid;
+		char* cmd;
+		cmd = which(command[0]);
+		printf("Command is: %s\n",command[0]);
+		pid = fork();
+		if(pid == 0){
+			execv(cmd, command);
+		}else{
+			wait(&pid);
+		}
+    }
+}
+
 
 /*
 Given a result and a command, where the result is additional arguments for the command,
 it will execute the command with the additional args (result) and it will return
 the output of that call.
 */
-void rediect_output(char** LHS, char* filename){
+void redirect_output(char** LHS, char* filename){
 	char* cmd;
 	pid_t pid;
 	FILE* fp;
@@ -84,6 +128,7 @@ void rediect_output(char** LHS, char* filename){
 	}
 }
 
+
 void shell_pipe(char** LHS, char** RHS){
 	char* cmd;
 	char* cmd2;
@@ -91,8 +136,8 @@ void shell_pipe(char** LHS, char** RHS){
 	int fd[2];
 	int stdin_save;
 	int stdout_save;
-	print_array(LHS, "pipe_LHS");
-	print_array(RHS, "pipe_RHS");
+	/*print_array(LHS, "pipe_LHS");
+	print_array(RHS, "pipe_RHS");*/
 	cmd = which(LHS[0]);
 	cmd2 = which(RHS[0]);
 	pipe(fd);
@@ -148,8 +193,7 @@ int array_length(char** array){
 /*http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c 
    http://www.tldp.org/LDP/lpg/node11.html 
    http://stackoverflow.com/questions/4812891/fork-and-pipes-in-c */
-
-   char* which(char* cmd){
+char* which(char* cmd){
    	int fd[2];
    	int nbytes, i, ln;
    	pid_t childpid;
@@ -183,4 +227,4 @@ int array_length(char** array){
    		*(c) = '\0'; 
    	} 
    	return concat("",readbuffer); 
-   }
+}
