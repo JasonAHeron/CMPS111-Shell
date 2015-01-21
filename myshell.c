@@ -67,12 +67,15 @@ void parseargs(char** args){
 bugs:
 ls | cat | ls
 ls | cat | wc
+12 14 126
+11 11 101 < rea;
 */
     while(args[i] != NULL){
 		switch(*args[i]){
 			case '|': 
                /*execute start to the pipe. save it into stdout of w/e.*/
-               end = get_cmd_end(args+i+1) + i+1;
+               /*end = get_cmd_end(args+i+1) + i+1;*/
+			   end = get_cmd_end(args+i+1) + i;
                printf("end is: %d\n",end);
                char_save = args[end];
                args[end] = '\0';
@@ -186,6 +189,7 @@ void shell_pipe2(char** command, int save[]){
 	FILE* stream;
 	int c;
 	int fd[2];
+	printf("command to be sent to which: %s",command[0]);
 	cmd = which(command[0]);
 	pipe(fd);
 	pid = fork();
@@ -195,7 +199,7 @@ void shell_pipe2(char** command, int save[]){
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
-        printf("processing cmd %s:\n",cmd);
+        /*printf("processing cmd %s:\n",cmd);*/
         /*I want to put the new output into stdout*/
             /*while ((c = fgetc (stream)) != EOF)
                putchar (c);*/
@@ -203,7 +207,8 @@ void shell_pipe2(char** command, int save[]){
 	}else{
 		close(fd[1]);
 		close(0);
-		dup2(fd[0],0);
+		dup2(fd[0],0); /* this is a little spy that listens in. i am going to capture this into save[0]
+		to use as input later on.*/
 		wait(&pid);
 		save[0] = fd[0];
 		save[1] = fd[1];
