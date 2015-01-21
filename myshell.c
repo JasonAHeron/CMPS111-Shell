@@ -74,7 +74,7 @@ ls | cat | ls
                char_save = args[end];
                args[end] = '\0';
                printf("args == %s\n",*(args+i+1));
-               /*shell_pipe2(args+i+1, save);*/
+               shell_pipe2(args+i+1, save);
                args[end] = char_save;
                i = end;
 			break;
@@ -94,7 +94,6 @@ ls | cat | ls
 	}
 	stream = fdopen (save[0], "r");
     while ((c = fgetc (stream)) != EOF) {
-    	printf("___ val is %d of ",c);
     	if(c == '\0'){
     		printf("NULL FOUND\n");
     	}
