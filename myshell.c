@@ -46,12 +46,13 @@ void parseargs(char** args){
 	/*execute the first argument*/
     end = get_cmd_end(args);
     char_save = args[end];
-    printf("end  here is: %d\n",end);
+    /*printf("end  here is: %d\n",end);*/
     args[end] = '\0';
     standard_exec(args, save, original);
     args[end] = char_save;
     i = end;
     if(char_save == '\0'){
+       printf("PRINTING OUTPUT\n");
        stream = fdopen (save[0], "r");
        while ((c = fgetc (stream)) != EOF)
           putchar (c);
@@ -59,6 +60,7 @@ void parseargs(char** args){
        dup2(original[0], 0);
 	   dup2(original[1], 1);
 	   close(stream);
+	   return;
     }
     /*now stdout of this arg is saved into fd[1]*/
 /*
