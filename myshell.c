@@ -52,10 +52,10 @@ void parseargs(char** args){
     args[end] = char_save;
     i = end;
     if(char_save == '\0'){
-
        stream = fdopen (save[0], "r");
        while ((c = fgetc (stream)) != EOF)
           putchar (c);
+       printf("COMPLETED PRINT\n");
        dup2(original[0], 0);
 	   dup2(original[1], 1);
 	   close(stream);
@@ -75,6 +75,7 @@ ls | cat | ls
                args[end] = '\0';
                printf("args == %s\n",*(args+i+1));
                shell_pipe2(args+i+1, save);
+               printf("well that was sometihng\n");
                args[end] = char_save;
                i += end;
 			break;
@@ -92,6 +93,8 @@ ls | cat | ls
 		}
 		++i;
 	}
+	dup2(original[0], 0);
+	dup2(original[1], 1);
 	stream = fdopen (save[0], "r");
     while ((c = fgetc (stream)) != EOF) {
     	if(c == '\0'){
@@ -100,9 +103,6 @@ ls | cat | ls
         putchar (c);
     }
     printf("The end\n");
-
-	dup2(original[0], 0);
-	dup2(original[1], 1);
 
     
     /*
@@ -182,12 +182,12 @@ void shell_pipe2(char** command, int save[]){
 	pid_t pid;
 	FILE* stream;
 	int c;
+	int fd[2];
 	cmd = which(command[0]);
 	pid = fork();
 	if(pid == 0){
    	/*READ FROM PIPE!!*/
         stream = fdopen (save[0], "r");
-        close(save[0]);
         close(1);
         dup2(save[1],1);
         /*I want to put the new output into stdout*/
