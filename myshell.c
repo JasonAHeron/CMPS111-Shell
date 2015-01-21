@@ -7,10 +7,13 @@
 extern char **getline(void);
 char *concat(char* a, char* b);
 char *which(char* cmd);
-char* general_pipe(char* result, char** RHS);
+char* f_pipe(char* result, char** RHS);
 char** concat_array(char** a, char* b);
 int array_length(char** array);
 void free_chararray(char** array);
+char* exec_to_string(char** LHS);
+void print_array(char ** array);
+void working_pipe(char** LHS, char** RHS);
 
 int main(void) {
 	char** args;
@@ -23,6 +26,8 @@ int main(void) {
 }
 
 void parseargs(char** args){
+	char** LHS;
+	char** RHS;
 	char* cmd;
 	pid_t pid;
 	char* result;
@@ -32,18 +37,20 @@ void parseargs(char** args){
 	i = 0;
     first = 1; /*true*/
 
-	printf("ARGUMENTS:\n");
+	printf("PARSING:\n");
+	print_array(args);
 	while(args[i] != NULL){
-		printf("The args are: %s\n",args[i]);
 		switch(*args[i]){
 			case '|':
 			if(first) {
 				args[i] = '\0';
-     		   	result = first_pipe(args)
-     		   	printf("%s", result);
+				LHS = args;
+				RHS = args+(i+1);
+				working_pipe(LHS,RHS);
 			/* I want to free from the malloc but how? free(cmd);*/
-				}
 			}
+			
+			
 			printf("FOUND PIPE!!! \n");
 			break;
 			case '>':
@@ -68,7 +75,7 @@ void parseargs(char** args){
       /*collapse here. we have LHS, we have old special character, we have RHS up to new special character
         call a function to execute this simple redirect or pipe. store the result*/
       /*swtich (special):
-      pipe: result = general_pipe(LHS,RHS)
+      pipe: result = f_pipe(LHS,RHS)
       red_in: result = f_red_in(LHS,RHS)
       red_out: result = f_red_out(LHS,RHS)*/
 /*
@@ -92,42 +99,18 @@ Given a result and a command, where the result is additional arguments for the c
 it will execute the command with the additional args (result) and it will return
 the output of that call.
 */
-char* general_pipe(char* result, char** RHS){
+void working_pipe(char** LHS, char** RHS){
 	char* cmd;
-	char** full_args;
+	char* cmd2;
 	pid_t pid;
-	int fp[2];
-	char readbuffer[1024];
-	cmd = which(RHS[0]);
-	++RHS;
-	full_args = concat_array(RHS, result);
-	pipe(fp);
-	pid = fork();
-	if(pid == 0){
-        /*write from stdout into pipe*/
-        close(fd[0]); /* close pipe read, we are not using it */
-		close(1); /* close std_out so we can dup it */
-		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
-		execv(cmd, full_args);
-	}else{
-		close(fd[1]); /* close pipe write, we are not using it */
-   		wait(&pid);
-   		/*READ FROM PIPE!!*/
-        /* put the contents of fd[0] into readbuffer*/
-   		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
-	}
-	return readbuffer;
-}
-
-
-
-char* first_pipe(char** LHS){
-	char* cmd;
-	pid_t pid;
-	int fp[2];
-	char readbuffer[1024];
+	int fd[2];
+	printf("--LHS--\n");
+	print_array(LHS);
+	printf("--RHS--\n");
+	print_array(RHS);
 	cmd = which(LHS[0]);
-	pipe(fp);
+	cmd2 = which(RHS[0]);
+	pipe(fd);
 	pid = fork();
 	if(pid == 0){
         /*write from stdout into pipe*/
@@ -137,10 +120,74 @@ char* first_pipe(char** LHS){
 		execv(cmd, LHS);
 	}else{
 		close(fd[1]); /* close pipe write, we are not using it */
-   		wait(&pid);
+		dup2(fd[0], 0);
+		wait(&pid);
+		pid = fork();
+		if(pid == 0){
+   		/*READ FROM PIPE!!*/
+			execv(cmd2, stdin);
+		}else{
+			wait(&pid);
+		}
+	}
+}
+
+
+
+char* f_pipe(char* result, char** RHS){
+	int i;
+	char* cmd;
+	char** full_args;
+	pid_t pid;
+	int fd[2];
+	char readbuffer[1024];
+	i=0;
+	print_array(RHS);
+	printf("%s", RHS[1]);
+	cmd = which(RHS[1]);
+	++RHS;
+	full_args = concat_array(RHS, result);
+	print_array(full_args);
+	pipe(fd);
+	pid = fork();
+	if(pid == 0){
+        /*write from stdout into pipe*/
+        close(fd[0]); /* close pipe read, we are not using it */
+		close(1); /* close std_out so we can dup it */
+		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
+		execv(cmd, full_args);
+	}else{
+		close(fd[1]); /* close pipe write, we are not using it */
+		wait(&pid);
    		/*READ FROM PIPE!!*/
         /* put the contents of fd[0] into readbuffer*/
-   		read(fd[0], readbuffer, sizeof(readbuffer)); 
+		read(fd[0], readbuffer, sizeof(readbuffer)); 
+	}
+	return readbuffer;
+}
+
+
+/*this needs to be exec to file!*/
+char* exec_to_string(char** LHS){
+	char* cmd;
+	pid_t pid;
+	int fd[2];
+	char readbuffer[1024];
+	cmd = which(LHS[0]);
+	pipe(fd);
+	pid = fork();
+	if(pid == 0){
+        /*write from stdout into pipe*/
+        close(fd[0]); /* close pipe read, we are not using it */
+		close(1); /* close std_out so we can dup it */
+		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
+		execv(cmd, LHS);
+	}else{
+		close(fd[1]); /* close pipe write, we are not using it */
+		wait(&pid);
+   		/*READ FROM PIPE!!*/
+        /* put the contents of fd[0] into readbuffer*/
+		read(fd[0], readbuffer, sizeof(readbuffer)); 
 	}
 	return readbuffer;
 }
@@ -170,6 +217,14 @@ char** concat_array(char** a, char* b){
 
 void free_chararray(char** array){
 
+}
+
+void print_array(char ** array){
+	int i;
+	i=-1;
+	printf("------ARRAY_PRINTER------\n");
+	while(array[++i] != NULL)printf("ARRAY[%d]: %s\n", i, array[i]);
+	printf("------ARRAY_PRINTER------\n");
 }
 
 /*is this assuming that the first index is not null?*/
@@ -208,7 +263,7 @@ int array_length(char** array){
 		close(fd[1]); /* close pipe write, we are not using it */
    		wait(&childpid);
         /* put the contents of fd[0] into readbuffer*/
-   		printf("Size of buffer is %d\n",sizeof(readbuffer));
+   		/* printf("Size of buffer is %d\n",sizeof(readbuffer)); */
    		nbytes = read(fd[0], readbuffer, sizeof(readbuffer)); 
    	}
     c = strrchr(readbuffer, '\n'); /* strip \n which is added*/
