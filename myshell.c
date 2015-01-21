@@ -14,7 +14,9 @@ void redirect_output(char** LHS, char* filename);
 void print_array(char ** array, char* caller);
 void standard_exec(char** command, int save[], int original[]);
 int get_cmd_end(char** RHS_start);
+void redirect_input(char** LHS, char* filename);
 void parseargs(char** args);
+int begin_first_cmd(char** args);
 
 int main(void) {
 	char** args;
@@ -39,29 +41,36 @@ void parseargs(char** args){
 	int end;
 	int save[2];
 	int original[2];
+	int execute_first_flag;
 	FILE* stream;
 	int c;
+	char q;
 	start = 0;
 	i = 0;
+	execute_first_flag = begin_first_cmd(args);
 	/*execute the first argument*/
-    end = get_cmd_end(args);
-    char_save = args[end];
-    printf("end  here is: %d\n",end);
-    args[end] = '\0';
-    standard_exec(args, save, original);
-    args[end] = char_save;
-    i = end;
-    if(char_save == '\0'){
-       printf("PRINTING OUTPUT\n");
-       stream = fdopen (save[0], "r");
-       while ((c = fgetc (stream)) != EOF)
-          putchar (c);
-       printf("COMPLETED PRINT\n");
-       dup2(original[0], 0);
-	   dup2(original[1], 1);
-	   close(stream);
-	   return;
+	/*strip \n which is added*/
+	if(execute_first_flag){ /*|| strcmp(args[end],"|") == 0*/
+   	   printf("running bob\n");
+       end = get_cmd_end(args);
+       char_save = args[end];
+       printf("end  here is: %d\n",end);
+       args[end] = '\0';
+       standard_exec(args, save, original);
+       args[end] = char_save;
+       i = end;
+       if(char_save == '\0'){
+          printf("PRINTING OUTPUT\n");
+          stream = fdopen (save[0], "r");
+          while ((c = fgetc (stream)) != EOF)
+             putchar (c);
+          printf("COMPLETED PRINT\n");
+          dup2(original[0], 0);
+   	      dup2(original[1], 1);
+	      close(stream);
+       }
     }
+
     /*now stdout of this arg is saved into fd[1]*/
 /*
 bugs:
@@ -82,63 +91,51 @@ ls | cat | wc
                i = end;
 			break;
 			case '>':
-			   /*args[i] = '\0';
-			   LHS = args;
-			   filename = args[i+1];
-			   redirect_output(LHS,filename);*/
-			break;
-			case '<':
-			break;
-			default: 
-			   /*standard exec*/
-			break;
-		}
-	}
-	printf("Printing final output: \n");
-	dup2(original[0], 0);
-	dup2(original[1], 1);
-	stream = fdopen (save[0], "r");
-    while ((c = fgetc (stream)) != EOF) {
-    	if(c == '\0'){
-    		printf("NULL FOUND\n");
-    	}
-        putchar (c);
-    }
-    printf("The end.\n");
-
-    
-    /*
-    	while(args[i] != NULL){
-		switch(*args[i]){
-			case '|':
-               /*execute start to the pipe. save it into stdout of w/e.
-			   args[i] = '\0';
-               
-			   LHS = args;
-			   get_cmd_end(args+(i+1));
-			   shell_pipe(LHS,RHS);
-			break;
-			case '>':
+			   printf("I SEE >\n");
 			   args[i] = '\0';
 			   LHS = args;
 			   filename = args[i+1];
 			   redirect_output(LHS,filename);
 			break;
 			case '<':
+			   printf("I SEE <\n");
+			   args[i] = '\0';
+			   LHS = args;
+			   filename = args[i+1];
+			   redirect_input(LHS,filename);
+			   printf("Completed a redirect in");
 			break;
-			default:
-			   /*standard exec
+			default: ++i;
+			   /*standard exec*/
 			break;
-
 		}
-		++i;
 	}
-
-    */
-
-
-	/*LHS = args+start;
-	standard_exec(LHS);*/
+	if(execute_first_flag){
+	   printf("Printing final output: \n");
+	   stream = fdopen (save[0], "r");
+       while ((c = fgetc (stream)) != EOF) {
+    	   if(c == '\0'){
+    	      printf("NULL FOUND\n");
+    	   }
+           putchar (c);
+       }
+       printf("The end.\n");
+    }
+    dup2(original[0], 0);
+	dup2(original[1], 1);
+}
+/*
+if(args[end] == NULL){ /*|| strcmp(args[end],"|") == 0
+*/
+int begin_first_cmd(char** args){
+   int end;
+   end = get_cmd_end(args);
+   if(args[end] == NULL){
+   	  return 1;
+   }else if(strcmp(args[end],"|") == 0){
+   	  return 1;
+   }
+   return 0;
 }
 
 int get_cmd_end(char** cmd_start){
@@ -229,8 +226,57 @@ void redirect_output(char** LHS, char* filename){
 		dup2(fileno(fp), 1);
 		execv(cmd, LHS);
 	}else{
+
 		wait(&pid);
 		fclose(fp);
+	}
+}
+
+/*
+	char* cmd;
+	pid_t pid;
+	FILE* fp;
+	printf("FILENAME IS : %s\n", filename);
+	fp = fdopen (filename, "r");
+	print_array(LHS, "rd_out_LHS");
+	cmd = which(LHS[0]);
+	pid = fork();
+	if (pid == 0){
+		fflush(stdin);
+		dup2(fileno(fp), stdin);
+		execv(cmd, stdin);
+	}else{
+		wait(&pid);
+		fclose(fp);
+	}*/
+
+void redirect_input(char** LHS, char* filename){
+	char* cmd;
+	pid_t pid;
+	FILE* stream;
+	int c;
+	int fd[2];
+	printf("FILENAME IS : %s\n", filename);
+	stream = fopen (filename, "r");
+	cmd = which(LHS[0]);
+	pipe(fd);
+	pid = fork();
+	if(pid == 0){
+   	/*READ FROM PIPE!!*/
+		close(fd[0]);
+        close(1);
+        dup2(fd[1],1);
+        printf("processing cmd %s:\n",cmd);
+        /*I want to put the new output into stdout*/
+            /*while ((c = fgetc (stream)) != EOF)
+               putchar (c);*/
+        execv(cmd, stream);
+	}else{
+		close(fd[1]);
+		close(0);
+		dup2(fd[0],0);
+		wait(&pid);
+		fclose(stream);
 	}
 }
 
