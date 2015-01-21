@@ -76,7 +76,7 @@ ls | cat | ls
                printf("args == %s\n",*(args+i+1));
                shell_pipe2(args+i+1, save);
                args[end] = char_save;
-               i = end;
+               i += end;
 			break;
 			case '>':
 			   /*args[i] = '\0';
