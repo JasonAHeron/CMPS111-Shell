@@ -2,6 +2,7 @@
 Makefile
 a.out
 myshell.c
+myshell.c.bak
 parser.y
 recordings
 scanner.l

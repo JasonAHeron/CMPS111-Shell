@@ -8,27 +8,30 @@ extern char **getline(void);
 char *concat(char* a, char* b);
 char *which(char* cmd);
 int array_length(char** array);
-void working_pipe(char** LHS, char** RHS);
+void shell_pipe(char** LHS, char** RHS);
 void rediect_output(char** LHS, char* filename);
-void p_array(char ** array, char* caller);
+void print_array(char ** array, char* caller);
 
 int main(void) {
 	char** args;
 	while(1) {
-		printf("SEXY_SHELL#");
+		printf("SEXY_SHELL# ");
 		args = getline();
-		if (args[0]=='\0') continue; 
+		printf("args is: %s\n\n", *args);
+		if (*args[0]=='\0'){
+			continue;
+		} 
 		parseargs(args);
 	}
 }
 
 void parseargs(char** args){
-	char** LHS;
+	char** LHS; 
 	char** RHS;
 	char* filename;
 	int i;
 	i = 0;
-	p_array(args, "parsing");
+	print_array(args, "parsing");
 	while(args[i] != NULL){
 		switch(*args[i]){
 			case '|':
@@ -36,7 +39,7 @@ void parseargs(char** args){
 			args[i] = '\0';
 			LHS = args;
 			RHS = args+(i+1);
-			working_pipe(LHS,RHS);
+			shell_pipe(LHS,RHS);
 			/* I want to free from the malloc but how? free(cmd);*/
 			break;
 			case '>':
@@ -49,7 +52,10 @@ void parseargs(char** args){
 			case '<':
 			printf("FOUND redirect in !! \n");
 			break;
-			default: break;
+			default:
+			/*standard exec*/
+			break;
+
 		}
 		++i;
 	}
@@ -65,7 +71,7 @@ void rediect_output(char** LHS, char* filename){
 	pid_t pid;
 	FILE* fp;
 	fp = fopen(filename, "w+");
-	p_array(LHS, "rd_out_LHS");
+	print_array(LHS, "rd_out_LHS");
 	cmd = which(LHS[0]);
 	pid = fork();
 	if (pid == 0){
@@ -78,13 +84,15 @@ void rediect_output(char** LHS, char* filename){
 	}
 }
 
-void working_pipe(char** LHS, char** RHS){
+void shell_pipe(char** LHS, char** RHS){
 	char* cmd;
 	char* cmd2;
 	pid_t pid;
 	int fd[2];
-	p_array(LHS, "pipe_LHS");
-	p_array(RHS, "pipe_RHS");
+	int stdin_save;
+	int stdout_save;
+	print_array(LHS, "pipe_LHS");
+	print_array(RHS, "pipe_RHS");
 	cmd = which(LHS[0]);
 	cmd2 = which(RHS[0]);
 	pipe(fd);
@@ -92,11 +100,13 @@ void working_pipe(char** LHS, char** RHS){
 	if(pid == 0){
         /*write from stdout into pipe*/
         close(fd[0]); /* close pipe read, we are not using it */
+		stdout_save = dup(1);
 		close(1); /* close std_out so we can dup it */
 		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
 		execv(cmd, LHS);
 	}else{
 		close(fd[1]); /* close pipe write, we are not using it */
+		stdin_save = dup(0);
 		dup2(fd[0], 0);
 		wait(&pid);
 		pid = fork();
@@ -105,9 +115,12 @@ void working_pipe(char** LHS, char** RHS){
 			execv(cmd2, stdin);
 		}else{
 			wait(&pid);
+			dup2(stdin_save, 0);
+			dup2(stdout_save, 1);
 		}
 	}
 }
+
 
 /*concatinates a string*/
 char* concat(char* a, char* b){
@@ -117,14 +130,14 @@ char* concat(char* a, char* b){
 	return c;
 }
 
-void p_array(char ** array, char* caller){
+void print_array(char ** array, char* caller){
 	int i;
 	i=-1;
 	printf("------ARRAY_PRINTER<%s>\n", caller);
 	while(array[++i] != NULL)printf("ARRAY[%d]: %s\n", i, array[i]);
 	printf("------END_ARRAY_PRINTER<%s>\n", caller);
-}
 
+}
 /*is this assuming that the first index is not null?*/
 int array_length(char** array){
 	int count = 0; 
@@ -132,9 +145,10 @@ int array_length(char** array){
 	return count;
 }
 
-/* http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c 
+/*http://stackoverflow.com/questions/19288859/how-to-redirect-stdout-to-a-string-in-ansi-c 
    http://www.tldp.org/LDP/lpg/node11.html 
    http://stackoverflow.com/questions/4812891/fork-and-pipes-in-c */
+
    char* which(char* cmd){
    	int fd[2];
    	int nbytes, i, ln;
