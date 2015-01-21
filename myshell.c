@@ -70,12 +70,12 @@ ls | cat | ls
 			case '|': 
                /*execute start to the pipe. save it into stdout of w/e.*/
                end = get_cmd_end(args+i+1);
-               printf("end is: %d\n",end);
+               /*printf("end is: %d\n",end);*/
                char_save = args[end];
                args[end] = '\0';
-               printf("args == %s\n",*(args+i+1));
+               /*printf("args == %s\n",*(args+i+1));*/
                shell_pipe2(args+i+1, save);
-               printf("well that was sometihng\n");
+               
                args[end] = char_save;
                i += end;
 			break;
@@ -93,6 +93,7 @@ ls | cat | ls
 		}
 		++i;
 	}
+	printf("Printing final output: \n");
 	dup2(original[0], 0);
 	dup2(original[1], 1);
 	stream = fdopen (save[0], "r");
@@ -102,7 +103,7 @@ ls | cat | ls
     	}
         putchar (c);
     }
-    printf("The end\n");
+    printf("The end.\n");
 
     
     /*
@@ -184,18 +185,23 @@ void shell_pipe2(char** command, int save[]){
 	int c;
 	int fd[2];
 	cmd = which(command[0]);
+	pipe(fd);
 	pid = fork();
 	if(pid == 0){
    	/*READ FROM PIPE!!*/
+		close(fd[0]);
         stream = fdopen (save[0], "r");
         close(1);
-        dup2(save[1],1);
+        dup2(fd[1],1);
         /*I want to put the new output into stdout*/
         /*    while ((c = fgetc (stream)) != EOF)
                putchar (c);*/
         execv(cmd, stream);
 	}else{
+		close(fd[1]);
 		wait(&pid);
+		save[0] = fd[0];
+		save[1] = fd[1];
 		close(stream);
 	}
 }
