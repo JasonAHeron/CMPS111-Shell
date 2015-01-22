@@ -103,7 +103,7 @@ ls | cat | wc
 			   LHS = args;
 			   filename = args[i+1];
 			   redirect_input(LHS,filename);
-			   printf("Completed a redirect in");
+			   printf("Completed a redirect in\n");
 			break;
 			default: ++i;
 			   /*standard exec*/
@@ -194,8 +194,6 @@ void shell_pipe2(char** command, int save[]){
         dup2(fd[1],1);
         printf("processing cmd %s:\n",cmd);
         /*I want to put the new output into stdout*/
-            /*while ((c = fgetc (stream)) != EOF)
-               putchar (c);*/
         execv(cmd, stream);
 	}else{
 		close(fd[1]);
@@ -253,30 +251,17 @@ void redirect_output(char** LHS, char* filename){
 void redirect_input(char** LHS, char* filename){
 	char* cmd;
 	pid_t pid;
-	FILE* stream;
-	int c;
-	int fd[2];
-	printf("FILENAME IS : %s\n", filename);
-	stream = fopen (filename, "r");
+	FILE* fp;
+	fp = fopen(filename, "rw+");
 	cmd = which(LHS[0]);
-	pipe(fd);
 	pid = fork();
-	if(pid == 0){
-   	/*READ FROM PIPE!!*/
-		close(fd[0]);
-        close(1);
-        dup2(fd[1],1);
-        printf("processing cmd %s:\n",cmd);
-        /*I want to put the new output into stdout*/
-            /*while ((c = fgetc (stream)) != EOF)
-               putchar (c);*/
-        execv(cmd, stream);
+	if (pid == 0){
+		fflush(stdin);
+		dup2(fileno(fp), 0);
+		execv(cmd, LHS);
 	}else{
-		close(fd[1]);
-		close(0);
-		dup2(fd[0],0);
 		wait(&pid);
-		fclose(stream);
+		fclose(fp);
 	}
 }
 
