@@ -1,3 +1,5 @@
+all: flex compile
+
 bison:
 	bison --defines=yyparse.h --output=yyparse.cpp parser.y
 
