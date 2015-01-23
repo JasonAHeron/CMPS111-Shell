@@ -5,20 +5,19 @@
 #include <unistd.h>
 
 extern char **getline(void);
-int begin_first_cmd(char** args);
-int prefix_strcmp(char* arg, char* match);
-int array_length(char** array);
-int get_cmd_end(char** RHS_start);
 char *concat(char* a, char* b);
 char *which(char* cmd);
-void shell_pipe(char** command, int save[]);
+int array_length(char** array);
+void shell_pipe2(char** command, int save[]);
 void redirect_output(char** LHS, char* filename);
 void print_array(char ** array, char* caller);
 void standard_exec(char** command, int save[], int original[]);
+int get_cmd_end(char** RHS_start);
 void redirect_input(char** LHS, char* filename);
 void parseargs(char** args);
+int begin_first_cmd(char** args);
+int prefix_strcmp(char* arg, char* match);
 void strict_exec(char** args);
-
 
 /*continually gets new lines from stdin,
 avoids breaking if user enters nothing*/
@@ -27,9 +26,7 @@ int main(void) {
 	while(1) {
 		printf("SEXY_SHELL# ");
 		args = getline();
-		if (args[0]=='\0'){
-			continue;
-		}
+		if (args[0]=='\0')continue;
 		parseargs(args);
 	}
 }
@@ -40,7 +37,7 @@ void parseargs(char** args){
 	char** RHS;
 	char* filename;
 	char* char_save;
-	int i, end, c, execute_first_flag;
+	int i, end, execute_first_flag, c;
 	int save[2];
 	int original[2];
 	FILE* stream;
@@ -55,11 +52,9 @@ void parseargs(char** args){
        args[end] = char_save;
        i = end;
        if(char_save == '\0'){
-          /*printf("PRINTING OUTPUT\n");*/
           stream = fdopen (save[0], "r");
           while ((c = fgetc (stream)) != EOF)
              putchar (c);
-          /*printf("COMPLETED PRINT\n");*/
           dup2(original[0], 0);
    	      dup2(original[1], 1);
 	      close(stream);
@@ -74,11 +69,11 @@ void parseargs(char** args){
 			case '|': 
                /*execute start to the pipe. save it into stdout of w/e.*/
                end = get_cmd_end(args+i+1) + i+1;
-               /*printf("end is: %d\n",end);*/
+               /*if this print is commented out the program won't work*/
+               printf("");
                char_save = args[end];
                args[end] = '\0';
-               /*printf("args == %s\n",*(args+i+1));*/
-               shell_pipe(args+i+1, save);
+               shell_pipe2(args+i+1, save);
                args[end] = char_save;
                i = end;
 			break;
@@ -104,14 +99,13 @@ void parseargs(char** args){
                /*manually search for cd, exit, pwd. do an exec without a fork*/
 			   if(prefix_strcmp(args[0], "cd")){
 			   	  chdir(args[1]);
-			   	  printf("I did a cd!\n");
-			   }else if(prefix_strcmp(args[0], "pwd")){
+			   }else if(prefix_strcmp(args[0], "pwd")){			  
 			   	  strict_exec(args);
-			   }else if(prefix_strcmp(args[0], "exit")){
+			   }else if(prefix_strcmp(args[0], "exit")){			   	 
 			   	  exit(0);
 			   }
 			   ++i;
-			break;
+			   break;
 		}
 	}
 	/*print from stream when needed*/
@@ -187,7 +181,7 @@ int get_cmd_end(char** cmd_start){
    return index;
 }
 
-void standard_exec(char** command, int save[], int original[]){
+void standard_exec(char** command, int save[], int original[]){ 
 	if(command[0] != '\0'){ /* I can't return if null for some reason*/
 		pid_t pid;
 		char* cmd;
@@ -212,11 +206,13 @@ void standard_exec(char** command, int save[], int original[]){
     }
 }
 
+
 /*This function reads from the stdin to get the arguments*/
-void shell_pipe(char** command, int save[]){
+void shell_pipe2(char** command, int save[]){
 	char* cmd;
 	pid_t pid;
 	FILE* stream;
+	char c;
 	int fd[2];
 	cmd = which(command[0]);
 	pipe(fd);
@@ -228,7 +224,7 @@ void shell_pipe(char** command, int save[]){
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
-        execv(cmd, stream);
+        execv(cmd, command); /*stream*/
 	}else{
 		close(fd[1]);
 		close(0);
@@ -250,7 +246,7 @@ void redirect_output(char** LHS, char* filename){
 	pid_t pid;
 	FILE* fp;
 	fp = fopen(filename, "w+");
-	print_array(LHS, "rd_out_LHS");
+	/*print_array(LHS, "rd_out_LHS");*/
 	cmd = which(LHS[0]);
 	pid = fork();
 	if (pid == 0){
@@ -301,7 +297,6 @@ void print_array(char ** array, char* caller){
 	printf("------END_ARRAY_PRINTER<%s>\n", caller);
 
 }
-
 /*is this assuming that the first index is not null?*/
 int array_length(char** array){
 	int count = 0; 
