@@ -90,7 +90,8 @@ ls | cat | ls
 
 resolved bugs:
 ls | cat | wc
-*/
+*/ 
+
     while(args[i] != NULL){
 		switch(*args[i]){
 			case '|': 
@@ -133,10 +134,10 @@ ls | cat | wc
 			   	  strict_exec(args);
 			   }
 			   ++i;
-			   /*standard exec*/
-			break;
+			   break;
 		}
 	}
+
 	if(execute_first_flag){
 	   printf("Printing final output: \n");
 	   stream = fdopen (save[0], "r");
@@ -207,7 +208,7 @@ int get_cmd_end(char** cmd_start){
    return index;
 }
 
-void standard_exec(char** command, int save[], int original[]){
+void standard_exec(char** command, int save[], int original[]){ 
 	if(command[0] != '\0'){ /* I can't return if null for some reason*/
 		pid_t pid;
 		char* cmd;
@@ -238,7 +239,7 @@ void shell_pipe2(char** command, int save[]){
 	char* cmd;
 	pid_t pid;
 	FILE* stream;
-	int c;
+	char c;
 	int fd[2];
 	cmd = which(command[0]);
 	pipe(fd);
@@ -250,7 +251,7 @@ void shell_pipe2(char** command, int save[]){
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
-        execv(cmd, stream);
+        execv(cmd, command); /*stream*/
 	}else{
 		close(fd[1]);
 		close(0);

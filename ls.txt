@@ -9,4 +9,5 @@ recordings
 scanner.l
 test
 testing.c
+wc.txt
 yylex.c
