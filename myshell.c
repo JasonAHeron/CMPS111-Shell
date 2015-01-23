@@ -17,6 +17,8 @@ int get_cmd_end(char** RHS_start);
 void redirect_input(char** LHS, char* filename);
 void parseargs(char** args);
 int begin_first_cmd(char** args);
+int prefix_strcmp(char* arg, char* match);
+void strict_exec(char** args);
 
 int main(void) {
 	char** args;
@@ -50,11 +52,10 @@ void parseargs(char** args){
 	execute_first_flag = begin_first_cmd(args);
 	/*execute the first argument*/
 	/*strip \n which is added*/
-	if(execute_first_flag){ /*|| strcmp(args[end],"|") == 0*/
+	if(execute_first_flag){ 
    	   printf("running bob\n");
        end = get_cmd_end(args);
        char_save = args[end];
-       printf("end  here is: %d\n",end);
        args[end] = '\0';
        standard_exec(args, save, original);
        args[end] = char_save;
@@ -73,8 +74,21 @@ void parseargs(char** args){
 
     /*now stdout of this arg is saved into fd[1]*/
 /*
+
+test cases:
+ls | wc > wc.txt
+
+pass:
+ls | wc
+ls > ls.txt
+cat < ls.txt
+ls 
+ls | cat | wc
+
 bugs:
 ls | cat | ls
+
+resolved bugs:
 ls | cat | wc
 */
     while(args[i] != NULL){
@@ -105,7 +119,20 @@ ls | cat | wc
 			   redirect_input(LHS,filename);
 			   printf("Completed a redirect in\n");
 			break;
-			default: ++i;
+			default: 
+               /*manually search for cd, exit, pwd. do an exec without a fork*/
+			   if(prefix_strcmp(args[0], "cd")){
+			   	  printf("I found a cd!\n");
+			   	  strict_exec(args);
+			   	  printf("I did a cd!\n");
+			   }else if(prefix_strcmp(args[0], "pwd")){
+			   	  printf("I found a pwd!\n");
+			   	  strict_exec(args);
+			   }else if(prefix_strcmp(args[0], "exit")){
+			   	  printf("I found a exit!\n");
+			   	  strict_exec(args);
+			   }
+			   ++i;
 			   /*standard exec*/
 			break;
 		}
@@ -124,12 +151,43 @@ ls | cat | wc
     dup2(original[0], 0);
 	dup2(original[1], 1);
 }
+
+void strict_exec(char** args){
+	char* cmd;
+	cmd = which(args[0]);
+    execv(cmd, args);
+}
+
 /*
-if(args[end] == NULL){ /*|| strcmp(args[end],"|") == 0
+Function takes in 2 character arrays called arg and match.
+It checks to see if the prefix of arg is equal to match.
+If there is a match, it will return 1.
+*/
+int prefix_strcmp(char* arg, char* match){
+   int i;
+   i = 0;
+   while(arg[i]!='\0' && match[i]!='\0'){
+      if(arg[i]!=match[i]){
+      	  return 0;
+      }
+      ++i;
+   }
+   /*check to see if we have reached the end of match. If yes, then we know that
+     the prefixs match*/
+   if(match[i]=='\0'){
+   	  return 1;
+   }
+}
+
+/*
+
 */
 int begin_first_cmd(char** args){
    int end;
    end = get_cmd_end(args);
+   if(prefix_strcmp(args[0],"cd")||prefix_strcmp(args[0],"pwd")||prefix_strcmp(args[0],"exit")){
+   	  return 0;
+   }
    if(args[end] == NULL){
    	  return 1;
    }else if(strcmp(args[end],"|") == 0){
@@ -175,8 +233,7 @@ void standard_exec(char** command, int save[], int original[]){
 }
 
 
-/*printf("cmd is: %s\n",cmd);
-printf("stdin is: %s\n",stdin);*/
+/*This function reads from the stdin to get the arguments*/
 void shell_pipe2(char** command, int save[]){
 	char* cmd;
 	pid_t pid;
@@ -189,11 +246,10 @@ void shell_pipe2(char** command, int save[]){
 	if(pid == 0){
    	/*READ FROM PIPE!!*/
 		close(fd[0]);
+		/*c = dup(0);*/
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
-        printf("processing cmd %s:\n",cmd);
-        /*I want to put the new output into stdout*/
         execv(cmd, stream);
 	}else{
 		close(fd[1]);
