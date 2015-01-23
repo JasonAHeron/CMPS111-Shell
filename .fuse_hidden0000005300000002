@@ -5,18 +5,19 @@
 #include <unistd.h>
 
 extern char **getline(void);
-int begin_first_cmd(char** args);
-int prefix_strcmp(char* arg, char* match);
-int array_length(char** array);
-int get_cmd_end(char** RHS_start);
 char *concat(char* a, char* b);
 char *which(char* cmd);
-void shell_pipe(char** command, int save[]);
+int array_length(char** array);
+void shell_pipe(char** LHS, char** RHS);
+void shell_pipe2(char** command, int save[]);
 void redirect_output(char** LHS, char* filename);
 void print_array(char ** array, char* caller);
 void standard_exec(char** command, int save[], int original[]);
+int get_cmd_end(char** RHS_start);
 void redirect_input(char** LHS, char* filename);
 void parseargs(char** args);
+int begin_first_cmd(char** args);
+int prefix_strcmp(char* arg, char* match);
 void strict_exec(char** args);
 
 
@@ -78,7 +79,7 @@ void parseargs(char** args){
                char_save = args[end];
                args[end] = '\0';
                /*printf("args == %s\n",*(args+i+1));*/
-               shell_pipe(args+i+1, save);
+               shell_pipe2(args+i+1, save);
                args[end] = char_save;
                i = end;
 			break;
@@ -213,7 +214,7 @@ void standard_exec(char** command, int save[], int original[]){
 }
 
 /*This function reads from the stdin to get the arguments*/
-void shell_pipe(char** command, int save[]){
+void shell_pipe2(char** command, int save[]){
 	char* cmd;
 	pid_t pid;
 	FILE* stream;
@@ -283,6 +284,44 @@ void redirect_input(char** LHS, char* filename){
 		fclose(fp);
 	}
 }
+
+void shell_pipe(char** LHS, char** RHS){
+	char* cmd;
+	char* cmd2;
+	pid_t pid;
+	int fd[2];
+	int stdin_save;
+	int stdout_save;
+	/*print_array(LHS, "pipe_LHS");
+	print_array(RHS, "pipe_RHS");*/
+	cmd = which(LHS[0]);
+	cmd2 = which(RHS[0]);
+	pipe(fd);
+	pid = fork();
+	if(pid == 0){
+        /*write from stdout into pipe*/
+        close(fd[0]); /* close pipe read, we are not using it */
+		stdout_save = dup(1);
+		close(1); /* close std_out so we can dup it */
+		dup2(fd[1], 1); /*std_out (the output of which) -> pipe write */
+		execv(cmd, LHS);
+	}else{
+		close(fd[1]); /* close pipe write, we are not using it */
+		stdin_save = dup(0);
+		dup2(fd[0], 0);
+		wait(&pid);
+		pid = fork();
+		if(pid == 0){
+   		    /*READ FROM PIPE!!*/
+			execv(cmd2, stdin);
+		}else{
+			wait(&pid);
+			dup2(stdin_save, 0);
+			dup2(stdout_save, 1);
+		}
+	}
+}
+
 
 /*concatinates a string*/
 char* concat(char* a, char* b){

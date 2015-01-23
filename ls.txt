@@ -1,3 +1,4 @@
+.fuse_hidden0000005300000002
 .git
 Makefile
 a.out
