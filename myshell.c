@@ -90,8 +90,7 @@ ls | cat | ls
 
 resolved bugs:
 ls | cat | wc
-*/ 
-
+*/
     while(args[i] != NULL){
 		switch(*args[i]){
 			case '|': 
@@ -124,20 +123,20 @@ ls | cat | wc
                /*manually search for cd, exit, pwd. do an exec without a fork*/
 			   if(prefix_strcmp(args[0], "cd")){
 			   	  printf("I found a cd!\n");
-			   	  strict_exec(args);
+			   	  chdir(args[1]);
 			   	  printf("I did a cd!\n");
 			   }else if(prefix_strcmp(args[0], "pwd")){
 			   	  printf("I found a pwd!\n");
 			   	  strict_exec(args);
 			   }else if(prefix_strcmp(args[0], "exit")){
 			   	  printf("I found a exit!\n");
-			   	  strict_exec(args);
+			   	  exit(0);
 			   }
 			   ++i;
-			   break;
+			   /*standard exec*/
+			break;
 		}
 	}
-
 	if(execute_first_flag){
 	   printf("Printing final output: \n");
 	   stream = fdopen (save[0], "r");
@@ -208,7 +207,7 @@ int get_cmd_end(char** cmd_start){
    return index;
 }
 
-void standard_exec(char** command, int save[], int original[]){ 
+void standard_exec(char** command, int save[], int original[]){
 	if(command[0] != '\0'){ /* I can't return if null for some reason*/
 		pid_t pid;
 		char* cmd;
@@ -239,7 +238,7 @@ void shell_pipe2(char** command, int save[]){
 	char* cmd;
 	pid_t pid;
 	FILE* stream;
-	char c;
+	int c;
 	int fd[2];
 	cmd = which(command[0]);
 	pipe(fd);
@@ -251,7 +250,7 @@ void shell_pipe2(char** command, int save[]){
         stream = fdopen (save[0], "r");
         close(1);
         dup2(fd[1],1);
-        execv(cmd, command); /*stream*/
+        execv(cmd, stream);
 	}else{
 		close(fd[1]);
 		close(0);
